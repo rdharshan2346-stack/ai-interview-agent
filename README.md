@@ -3,6 +3,8 @@
 **ABTalks Vibe Code Hackathon — Problem Statement 2**
 Built solo by Dharshan, entirely AI-assisted. See [PROMPTS.md](./PROMPTS.md).
 
+**Live demo:** https://ai-interview-agent-orpin.vercel.app/test
+
 An AI agent that conducts an adaptive, multi-turn technical interview with a
 graduate of a 31-day AI engineering cohort — then returns structured feedback.
 
@@ -103,22 +105,23 @@ Get a free Gemini key (no credit card): https://aistudio.google.com/apikey
 
 Import the repo into Vercel, then:
 1. Set env var `GEMINI_API_KEY`.
-2. Attach a KV database (Storage → Create Database → KV).
+2. Attach a Redis database (Storage tab → Marketplace Database Providers →
+   Redis → Create). This injects `REDIS_URL`.
 
-KV is required in production: serverless invocations don't share memory, so
-without it multi-turn sessions break. The app falls back to in-memory storage
-locally so `npm run dev` works with zero setup — the health check tells you
-which mode is live.
+A database is required in production: serverless invocations don't share
+memory, so without it multi-turn sessions break. The app falls back to
+in-memory storage locally so `npm run dev` works with zero setup — the
+health check tells you which mode is live.
 
 ## Stack
 
-Next.js 14 (App Router) · Gemini 2.5 Flash · Vercel KV · Tailwind
+Next.js 14 (App Router) · Gemini (`gemini-flash-lite-latest`) · Redis (Vercel Marketplace) · Tailwind
 
 ```
 app/api/interview/route.js   HTTP layer + state machine
 lib/interview-engine.js      Day selection + prompt construction
 lib/gemini.js                Model client, retry/backoff, JSON parsing
-lib/session-store.js         KV with in-memory fallback
+lib/session-store.js         Redis with in-memory fallback
 app/test/page.js             Browser test console
 scripts/test-interview.mjs   End-to-end smoke test
 ```
