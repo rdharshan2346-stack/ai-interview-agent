@@ -94,9 +94,14 @@ End-to-end: `node scripts/test-interview.mjs CAND-014`
 
 Vercel, importing the GitHub repo. Two things must be set in the Vercel project:
 1. Env var `GEMINI_API_KEY`
-2. A **KV database** attached (Storage → Create Database → KV). Without it the
-   app silently falls back to in-memory sessions, which **breaks multi-turn
-   interviews in production** because serverless invocations don't share memory.
+2. A **Redis database** attached (Storage tab → Marketplace Database Providers →
+   Redis → Create). This injects `REDIS_URL`, which `lib/session-store.js`
+   connects to with the standard `redis` client. Without it the app silently
+   falls back to in-memory sessions, which **breaks multi-turn interviews in
+   production** because serverless invocations don't share memory.
+   Note: Vercel's native "KV" product (and its `KV_REST_API_URL` /
+   `KV_REST_API_TOKEN` env vars) is retired — the Marketplace Redis integration
+   is the current path and provisions a plain connection string instead.
    The GET health check reports which mode is active — check it after deploying.
 
 ## Known gaps / good next steps

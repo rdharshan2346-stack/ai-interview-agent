@@ -167,3 +167,36 @@ compensation data rather than generic ones — and follow-ups escalated into
 harder territory after strong answers versus redirecting after weak ones,
 confirming the evaluate-then-follow-up split described in CLAUDE.md is doing
 real work, not just adding latency.
+
+## 10. Deployment surfaced a fifth bug: the KV product the code was built against had been retired
+
+`lib/session-store.js` was written against Vercel's native KV product —
+checking for `KV_REST_API_URL` / `KV_REST_API_TOKEN` and calling
+`@vercel/kv`'s REST client, per CLAUDE.md's original deployment instructions
+("Storage → Create Database → KV"). After actually attaching a database
+through the Vercel dashboard and deploying, the only relevant env vars
+present in the project were `REDIS_URL` and `GEMINI_API_KEY` — no
+`KV_REST_API_*` vars at all, and the health check's `kv: "in-memory
+fallback"` confirmed the app wasn't detecting it. Vercel's native KV product
+has since been retired; "Storage → Create Database → KV" no longer exists as
+a literal option. The Marketplace's Redis integration provisions a standard
+connection-string database instead of the old REST-based one, so this needed
+a client swap, not just an env var rename.
+
+Fixed by replacing `@vercel/kv` with the standard `redis` npm client,
+connecting via `REDIS_URL`, and switching reads/writes to explicit
+`JSON.stringify`/`JSON.parse` since the REST client's automatic
+serialization doesn't carry over to a plain Redis client.
+
+Verified with a test designed specifically to rule out the in-memory
+fallback masking a broken connection: started a session, killed and
+restarted the entire dev server process (wiping the in-process `Map`
+fallback), then continued the same session by ID. The follow-up question
+correctly built on the pre-restart answer — only possible if the state was
+actually read back from Redis, since a lost session would have returned a
+400 instead of continuing (a turn request carries no `candidate` payload to
+silently restart from). Independently connected to Redis afterward and
+confirmed the session key had in fact been written there, then deleted it.
+Also corrected CLAUDE.md's deployment instructions, which were written
+against the retired product and would have misled the next person who read
+them.
